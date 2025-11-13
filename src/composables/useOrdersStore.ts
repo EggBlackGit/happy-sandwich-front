@@ -56,7 +56,7 @@ async function fetchOptions() {
   loading.options = true
   try {
     const { data } = await api.get<OptionsResponse>('/meta/options')
-    options.menu_items = data.menu_items
+    options.menu_items = [...data.menu_items].sort((a, b) => a.priority - b.priority)
   } finally {
     loading.options = false
   }

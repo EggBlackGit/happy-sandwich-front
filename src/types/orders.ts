@@ -2,6 +2,7 @@ export interface MenuOption {
   id: string
   name: string
   default_price: number
+  priority: number
 }
 
 export interface MenuItemPayload {
@@ -10,6 +11,7 @@ export interface MenuItemPayload {
   default_price: number
   is_active: boolean
   description?: string | null
+  priority: number
 }
 
 export interface MenuItemRecord extends MenuItemPayload {

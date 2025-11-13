@@ -30,11 +30,11 @@
       <v-card-title class="text-h6 font-weight-bold">
         สรุปภาพรวม
       </v-card-title>
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" sm="6">
-            <v-sheet class="stat-card" color="orange-lighten-5" rounded="lg" elevation="0">
-              <div class="text-caption text-grey-darken-1">จำนวนออเดอร์</div>
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" sm="6">
+                <v-sheet class="stat-card" color="orange-lighten-5" rounded="lg" elevation="0">
+                  <div class="text-caption text-grey-darken-1">จำนวนออเดอร์</div>
               <div class="text-h4 font-weight-bold">{{ filteredSummary.total_orders }}</div>
             </v-sheet>
           </v-col>
@@ -51,15 +51,21 @@
               <div class="text-caption">{{ formatCurrency(unpaidAmount) }}</div>
             </v-sheet>
           </v-col>
-          <v-col cols="12" sm="6">
-            <v-sheet class="stat-card" color="blue-lighten-5" rounded="lg" elevation="0">
-              <div class="text-caption text-grey-darken-1">ยอดรวมโดยประมาณ</div>
-              <div class="text-h4 font-weight-bold">{{ formatCurrency(totalAmount) }}</div>
-            </v-sheet>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+              <v-col cols="12" sm="6">
+                <v-sheet class="stat-card" color="blue-lighten-5" rounded="lg" elevation="0">
+                  <div class="text-caption text-grey-darken-1">ยอดรวมโดยประมาณ</div>
+                  <div class="text-h4 font-weight-bold">{{ formatCurrency(totalAmount) }}</div>
+                </v-sheet>
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-sheet class="stat-card" color="purple-lighten-5" rounded="lg" elevation="0">
+                  <div class="text-caption text-grey-darken-1">กำไรประมาณการ (30%)</div>
+                  <div class="text-h4 font-weight-bold">{{ formatCurrency(profitAmount) }}</div>
+                </v-sheet>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
 
     <v-row dense>
       <v-col cols="12" md="6">
@@ -280,6 +286,7 @@ const totalAmount = computed(() =>
 const unpaidAmount = computed(() =>
   filteredOrders.value.filter((order) => !order.is_paid).reduce((sum, order) => sum + (order.price || 0), 0),
 )
+const profitAmount = computed(() => totalAmount.value * 0.3)
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount || 0)

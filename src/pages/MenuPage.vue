@@ -29,15 +29,15 @@
           density="comfortable"
           class="elevation-0"
         >
-          <template v-slot:item.default_price="{ value }">
+          <template #item.default_price="{ value }">
             {{ formatCurrency(value as number) }}
           </template>
-          <template v-slot:item.is_active="{ item }">
+          <template #item.is_active="{ item }">
             <v-chip :color="item.is_active ? 'success' : 'grey'" size="small" variant="tonal">
               {{ item.is_active ? 'เปิดขาย' : 'ปิดชั่วคราว' }}
             </v-chip>
           </template>
-          <template v-slot:item.actions="{ item }">
+          <template #item.actions="{ item }">
             <v-btn icon variant="text" color="primary" @click="openEditDialog(item)">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
@@ -68,10 +68,18 @@
             />
             <v-text-field
               v-model="form.slug"
-              label="รหัส (ไม่ระบุจะสร้างให้อัตโนมัติ)"
+              label="รหัส (กำหนดเองได้)"
               hint="ใช้ a-z/0-9 และขีดกลาง"
               density="comfortable"
               clearable
+            />
+            <v-text-field
+              v-model.number="form.priority"
+              label="ลำดับความสำคัญ"
+              type="number"
+              min="0"
+              density="comfortable"
+              prepend-inner-icon="mdi-sort"
             />
             <v-text-field
               v-model.number="form.default_price"
@@ -124,6 +132,7 @@ const store = useOrdersStore()
 const tableItems = computed(() => store.menuItems.value)
 
 const headers = [
+  { title: 'ลำดับ', key: 'priority', sortable: false },
   { title: 'ชื่อเมนู', key: 'name', sortable: false },
   { title: 'รหัส', key: 'slug', sortable: false },
   { title: 'ราคาเริ่มต้น', key: 'default_price', sortable: false },
@@ -155,6 +164,7 @@ function openEditDialog(item: MenuItemRecord) {
   Object.assign(form, {
     name: item.name,
     slug: item.slug,
+    priority: item.priority,
     default_price: item.default_price,
     is_active: item.is_active,
     description: item.description ?? '',
@@ -172,6 +182,7 @@ async function saveMenuItem() {
     const payload: MenuItemPayload = {
       name: form.name,
       slug: form.slug || undefined,
+      priority: form.priority,
       default_price: form.default_price,
       is_active: form.is_active,
       description: form.description || undefined,
@@ -217,9 +228,16 @@ function createEmptyForm(): MenuItemPayload {
   return {
     name: '',
     slug: '',
+    priority: 100,
     default_price: 0,
     is_active: true,
     description: '',
   }
 }
 </script>
+
+<style scoped>
+.stat-card {
+  padding: 16px;
+}
+</style>
