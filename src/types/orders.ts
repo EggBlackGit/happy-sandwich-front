@@ -68,3 +68,14 @@ export interface MenuGroupedOrder {
   note?: string | null
   is_paid: boolean
 }
+
+export interface PaymentBulkUpdateRequest {
+  start_date: string
+  end_date: string
+  is_paid: boolean
+}
+
+export interface PaymentBulkUpdateResponse {
+  updated: number
+  is_paid: boolean
+}

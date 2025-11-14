@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <v-container class="py-6" style="max-width: 1100px;">
     <v-row class="mb-3" dense>
       <v-col cols="6" sm="4">
@@ -19,7 +19,7 @@
           prepend-inner-icon="mdi-calendar-end"
         />
       </v-col>
-      <v-col cols="12" sm="4" class="d-flex align-end">
+      <v-col cols="12" sm="4" class="d-flex align-end flex-wrap ga-2">
         <v-btn variant="tonal" color="primary" @click="resetDateFilters">
           วันนี้
         </v-btn>
@@ -30,11 +30,11 @@
       <v-card-title class="text-h6 font-weight-bold">
         สรุปภาพรวม
       </v-card-title>
-          <v-card-text>
-            <v-row>
-              <v-col cols="12" sm="6">
-                <v-sheet class="stat-card" color="orange-lighten-5" rounded="lg" elevation="0">
-                  <div class="text-caption text-grey-darken-1">จำนวนออเดอร์</div>
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" sm="6">
+            <v-sheet class="stat-card" color="orange-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">จำนวนออเดอร์</div>
               <div class="text-h4 font-weight-bold">{{ filteredSummary.total_orders }}</div>
             </v-sheet>
           </v-col>
@@ -51,21 +51,78 @@
               <div class="text-caption">{{ formatCurrency(unpaidAmount) }}</div>
             </v-sheet>
           </v-col>
-              <v-col cols="12" sm="6">
-                <v-sheet class="stat-card" color="blue-lighten-5" rounded="lg" elevation="0">
-                  <div class="text-caption text-grey-darken-1">ยอดรวมโดยประมาณ</div>
-                  <div class="text-h4 font-weight-bold">{{ formatCurrency(totalAmount) }}</div>
-                </v-sheet>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-sheet class="stat-card" color="purple-lighten-5" rounded="lg" elevation="0">
-                  <div class="text-caption text-grey-darken-1">กำไรประมาณการ (30%)</div>
-                  <div class="text-h4 font-weight-bold">{{ formatCurrency(profitAmount) }}</div>
-                </v-sheet>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+          <v-col cols="12" sm="6">
+            <v-sheet class="stat-card" color="blue-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">ยอดรวมโดยประมาณ</div>
+              <div class="text-h4 font-weight-bold">{{ formatCurrency(totalAmount) }}</div>
+            </v-sheet>
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-sheet class="stat-card" color="purple-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">กำไรประมาณการ (30%)</div>
+              <div class="text-h4 font-weight-bold">{{ formatCurrency(profitAmount) }}</div>
+            </v-sheet>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <v-card elevation="2" class="mb-4">
+      <v-card-title class="text-h6 font-weight-bold">
+        คำนวณการใช้ขนมปัง
+      </v-card-title>
+      <v-card-text>
+        <div class="text-caption text-grey-darken-1 mb-3">
+          1 แถว มี 20 แผ่น (ตัดหัวท้ายออก) ใช้งานจริงได้ 18 แผ่น
+        </div>
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-sheet class="stat-card" color="amber-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">จำนวนแผ่นที่ต้องใช้</div>
+              <div class="text-h4 font-weight-bold">{{ formatNumber(breadUsage.totalSlices) }}</div>
+            </v-sheet>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-sheet class="stat-card" color="cyan-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">จำนวนแถวขนมปัง (18 แผ่น/แถว)</div>
+              <div class="text-h4 font-weight-bold">{{ formatNumber(breadUsage.totalLoaves) }}</div>
+            </v-sheet>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-sheet class="stat-card" color="lime-lighten-5" rounded="lg" elevation="0">
+              <div class="text-caption text-grey-darken-1">แผ่นคงเหลือ / ส่วนขาด</div>
+              <div class="text-h4 font-weight-bold">
+                {{ breadUsage.totalLoaves ? formatNumber(breadUsage.leftoverSlices) : 0 }}
+                <span class="text-body-2 text-grey-darken-1">แผ่น</span>
+              </div>
+            </v-sheet>
+          </v-col>
+        </v-row>
+        <v-divider class="my-4" />
+        <div class="text-subtitle-1 font-weight-bold mb-2">รายละเอียดแผ่นขนมปังตามเมนู</div>
+        <v-table density="comfortable">
+          <thead>
+            <tr>
+              <th>เมนู</th>
+              <th class="text-end">จำนวนชิ้น</th>
+              <th class="text-end">แผ่นต่อชิ้น</th>
+              <th class="text-end">รวมแผ่น</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="detail in breadUsage.details" :key="detail.menu_item_id">
+              <td>{{ detail.menu_item_name }}</td>
+              <td class="text-end">{{ formatNumber(detail.total_quantity) }}</td>
+              <td class="text-end">{{ detail.slices_per_item }}</td>
+              <td class="text-end">{{ formatNumber(detail.total_slices) }}</td>
+            </tr>
+            <tr v-if="!breadUsage.details.length">
+              <td colspan="4" class="text-center text-grey py-4">ยังไม่มีข้อมูลในช่วงวันที่เลือก</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card-text>
+    </v-card>
 
     <v-row dense>
       <v-col cols="12" md="6">
@@ -74,10 +131,10 @@
             สถานะค้างชำระ
           </v-card-title>
           <v-card-text>
-            <div class="text-subtitle-1 mb-2">จำนวนออเดอร์ค้างจ่าย</div>
+            <div class="text-subtitle-1 mb-2">จำนวนออเดอร์ที่ยังไม่ชำระ</div>
             <div class="text-h3 font-weight-bold mb-2">{{ filteredSummary.unpaid_orders }}</div>
             <div class="text-caption text-grey-darken-1 mb-4">
-              ยอดค้างชำระ {{ formatCurrency(unpaidAmount) }}
+              ยอดเงินที่ยังค้าง {{ formatCurrency(unpaidAmount) }}
             </div>
             <v-divider class="my-2" />
             <div class="text-subtitle-1">ยอดรวมทั้งหมด</div>
@@ -97,7 +154,7 @@
               <tr>
                 <th>เมนู</th>
                 <th class="text-end">จำนวนชิ้น</th>
-                <th class="text-end">ค้างจ่าย</th>
+                <th class="text-end">ค้างชำระ</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +172,7 @@
                 </td>
               </tr>
               <tr v-if="!filteredBreakdown.length">
-                <td colspan="3" class="text-center text-grey py-4">ยังไม่มีข้อมูลในช่วงที่เลือก</td>
+                <td colspan="3" class="text-center text-grey py-4">ยังไม่มีข้อมูลในช่วงวันที่เลือก</td>
               </tr>
             </tbody>
           </v-table>
@@ -164,7 +221,7 @@
                         :color="order.is_paid ? 'success' : 'warning'"
                         variant="tonal"
                       >
-                        {{ order.is_paid ? 'ชำระแล้ว' : 'ค้างจ่าย' }}
+                        {{ order.is_paid ? 'ชำระแล้ว' : 'ยังไม่ชำระ' }}
                       </v-chip>
                     </div>
                   </v-list-item-title>
@@ -174,12 +231,16 @@
           </v-expansion-panel>
         </v-expansion-panels>
       </template>
-      <div v-else class="text-center py-6 text-grey">
-        ยังไม่มีข้อมูลในช่วงวันที่ที่เลือก
-      </div>
+      <template v-else>
+        <div class="text-center text-grey py-6">
+          ยังไม่มีข้อมูลในช่วงวันที่เลือก
+        </div>
+      </template>
     </v-card>
   </v-container>
 </template>
+
+
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, watch } from 'vue'
@@ -187,10 +248,28 @@ import { useOrdersStore } from '../composables/useOrdersStore'
 
 const store = useOrdersStore()
 
+const BREAD_SLICES_PER_MENU: Record<string, number> = {
+  'sandwich-classic-large': 5,
+  'sandwich-chili-large': 5,
+  'sandwich-classic-medium': 2,
+  'sandwich-chili-medium': 2,
+  'sandwich-classic-small': 1,
+  'sandwich-chili-small': 1,
+}
+const USABLE_SLICES_PER_LOAF = 18
+
 const dateFilters = reactive({
   start: today(),
   end: today(),
 })
+
+const menuPriorityMap = computed(() => {
+  const map = new Map<string, number>()
+  store.options.menu_items.forEach((item) => map.set(item.id, item.priority ?? Number.MAX_SAFE_INTEGER))
+  return map
+})
+
+const getMenuPriority = (menuId: string) => menuPriorityMap.value.get(menuId) ?? Number.MAX_SAFE_INTEGER
 
 watch(
   () => dateFilters.start,
@@ -222,7 +301,7 @@ onMounted(async () => {
   if (!store.orders.value.length) {
     await store.fetchOrders()
   }
-  await store.fetchSummary()
+  await Promise.all([store.fetchSummary(), store.fetchOptions()])
 })
 
 const filteredOrders = computed(() =>
@@ -239,7 +318,10 @@ const filteredSummary = computed(() => {
 })
 
 const filteredBreakdown = computed(() => {
-  const map = new Map<string, { menu_item_id: string; menu_item_name: string; total_quantity: number; unpaid_quantity: number }>()
+  const map = new Map<
+    string,
+    { menu_item_id: string; menu_item_name: string; total_quantity: number; unpaid_quantity: number }
+  >()
   filteredOrders.value.forEach((order) => {
     const entry =
       map.get(order.menu_item_id) ||
@@ -255,11 +337,20 @@ const filteredBreakdown = computed(() => {
     }
     map.set(order.menu_item_id, entry)
   })
-  return Array.from(map.values())
+  return Array.from(map.values()).sort(
+    (a, b) => getMenuPriority(a.menu_item_id) - getMenuPriority(b.menu_item_id) || a.menu_item_name.localeCompare(b.menu_item_name),
+  )
 })
 
 const groupedMenuOrders = computed(() => {
-  const map = new Map<string, { menu_item_id: string; menu_item_name: string; orders: Array<{ customer_name: string; quantity: number; note?: string | null; is_paid: boolean }> }>()
+  const map = new Map<
+    string,
+    {
+      menu_item_id: string
+      menu_item_name: string
+      orders: Array<{ customer_name: string; quantity: number; note?: string | null; is_paid: boolean }>
+    }
+  >()
   filteredOrders.value.forEach((order) => {
     const entry =
       map.get(order.menu_item_id) ||
@@ -276,7 +367,9 @@ const groupedMenuOrders = computed(() => {
     })
     map.set(order.menu_item_id, entry)
   })
-  return Array.from(map.values())
+  return Array.from(map.values()).sort(
+    (a, b) => getMenuPriority(a.menu_item_id) - getMenuPriority(b.menu_item_id) || a.menu_item_name.localeCompare(b.menu_item_name),
+  )
 })
 
 const totalAmount = computed(() =>
@@ -288,8 +381,58 @@ const unpaidAmount = computed(() =>
 )
 const profitAmount = computed(() => totalAmount.value * 0.3)
 
+const breadUsage = computed(() => {
+  let totalSlices = 0
+  const detailsMap = new Map<
+    string,
+    {
+      menu_item_id: string
+      menu_item_name: string
+      slices_per_item: number
+      total_quantity: number
+      total_slices: number
+    }
+  >()
+
+  filteredOrders.value.forEach((order) => {
+    const slicesPerItem = BREAD_SLICES_PER_MENU[order.menu_item_id] || 0
+    if (!slicesPerItem) return
+    const slices = (order.quantity || 0) * slicesPerItem
+    totalSlices += slices
+    const detail =
+      detailsMap.get(order.menu_item_id) || {
+        menu_item_id: order.menu_item_id,
+        menu_item_name: order.menu_item_name,
+        slices_per_item: slicesPerItem,
+        total_quantity: 0,
+        total_slices: 0,
+      }
+    detail.total_quantity += order.quantity || 0
+    detail.total_slices += slices
+    detailsMap.set(order.menu_item_id, detail)
+  })
+
+  const totalLoaves = totalSlices ? Math.ceil(totalSlices / USABLE_SLICES_PER_LOAF) : 0
+  const usableSlices = totalLoaves * USABLE_SLICES_PER_LOAF
+  const leftoverSlices = usableSlices - totalSlices
+
+  return {
+    totalSlices,
+    totalLoaves,
+    usableSlices,
+    leftoverSlices,
+    details: Array.from(detailsMap.values()).sort(
+      (a, b) => getMenuPriority(a.menu_item_id) - getMenuPriority(b.menu_item_id) || b.total_slices - a.total_slices,
+    ),
+  }
+})
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amount || 0)
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('th-TH').format(value || 0)
 }
 
 function resetDateFilters() {

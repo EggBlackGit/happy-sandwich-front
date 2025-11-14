@@ -189,9 +189,19 @@
               prepend-inner-icon="mdi-calendar-end"
             />
           </v-col>
-          <v-col cols="12" sm="4" class="d-flex align-center">
+          <v-col cols="12" sm="4" class="d-flex align-center ga-2 flex-wrap">
             <v-btn variant="tonal" color="primary" @click="resetDateFilters">
               วันนี้
+            </v-btn>
+            <v-btn
+              color="success"
+              variant="tonal"
+              :disabled="bulkUpdating || !canBulkMarkPaid"
+              :loading="bulkUpdating"
+              @click="markPaidDialog = true"
+            >
+              <v-icon start>mdi-cash-check</v-icon>
+              ตั้งเป็นจ่ายแล้ว
             </v-btn>
           </v-col>
         </v-row>
@@ -346,6 +356,29 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="markPaidDialog" max-width="420">
+      <v-card>
+        <v-card-title class="text-h6 font-weight-bold">ยืนยันอัปเดตสถานะชำระ</v-card-title>
+        <v-card-text>
+          <div>
+            ต้องการตั้งสถานะ "ชำระแล้ว" ให้กับออเดอร์ระหว่าง {{ formatDateOnly(dateFilters.start) }} - {{ formatDateOnly(dateFilters.end) }}
+          </div>
+          <div class="text-caption text-medium-emphasis mt-2">
+            ทั้งหมด {{ filteredOrdersCount }} รายการในช่วงวันที่ที่กำลังกรองอยู่
+          </div>
+        </v-card-text>
+        <v-card-actions class="justify-end ga-2">
+          <v-btn variant="text" color="grey" @click="markPaidDialog = false" :disabled="bulkUpdating">
+            ยกเลิก
+          </v-btn>
+          <v-btn color="success" :loading="bulkUpdating" :disabled="!canBulkMarkPaid" @click="markDateRangePaid">
+            ยืนยัน
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+
     <v-snackbar v-model="snackbar" timeout="2500">
       {{ snackbarMessage }}
     </v-snackbar>
@@ -417,7 +450,9 @@ const loading = reactive({ orders: false, summary: false })
 const exporting = ref(false)
 const deleting = ref(false)
 const deleteDialog = ref(false)
+const markPaidDialog = ref(false)
 const orderToDelete = ref<Order | null>(null)
+const bulkUpdating = ref(false)
 const snackbar = ref(false)
 const snackbarMessage = ref('')
 const errorMessage = ref('')
@@ -475,8 +510,11 @@ const menuLookup = computed<Record<string, MenuOption>>(() =>
   }, {} as Record<string, MenuOption>),
 )
 
+const menuPriority = (menuId: string | undefined) =>
+  menuId && menuLookup.value[menuId] ? menuLookup.value[menuId].priority ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER
+
 const filteredOrders = computed(() => {
-  return orders.value.filter((order) => {
+  const filtered = orders.value.filter((order) => {
     const matchesSearch = order.customer_name.toLowerCase().includes(filters.search.toLowerCase())
     const matchesMenu = filters.menu === 'all' || order.menu_item_id === filters.menu
     const matchesPayment =
@@ -488,7 +526,24 @@ const filteredOrders = computed(() => {
     const matchesDate = isWithinDateRange(order.order_date)
     return matchesSearch && matchesMenu && matchesPayment && matchesDate
   })
+  return filtered
+    .slice()
+    .sort((a, b) => {
+      const priorityDiff = menuPriority(a.menu_item_id) - menuPriority(b.menu_item_id)
+      if (priorityDiff !== 0) {
+        return priorityDiff
+      }
+      const dateA = a.order_date ? new Date(a.order_date).getTime() : 0
+      const dateB = b.order_date ? new Date(b.order_date).getTime() : 0
+      if (dateA !== dateB) {
+        return dateB - dateA
+      }
+      return b.id - a.id
+    })
 })
+
+const filteredOrdersCount = computed(() => filteredOrders.value.length)
+const canBulkMarkPaid = computed(() => filteredOrdersCount.value > 0 && !isRefreshing.value)
 
 const orderHeaders = [
   { title: 'วันที่', key: 'order_date', sortable: false },
@@ -657,6 +712,28 @@ async function togglePaid(order: Order) {
   }
 }
 
+async function markDateRangePaid() {
+  if (!canBulkMarkPaid.value) {
+    markPaidDialog.value = false
+    return
+  }
+  bulkUpdating.value = true
+  try {
+    const result = await store.markOrdersPaid({
+      start_date: dateFilters.start,
+      end_date: dateFilters.end,
+      is_paid: true,
+    })
+    snackbarMessage.value = `อัปเดตสถานะชำระเงิน ${result.updated} รายการแล้ว`
+    snackbar.value = true
+    markPaidDialog.value = false
+  } catch (error) {
+    handleError(error)
+  } finally {
+    bulkUpdating.value = false
+  }
+}
+
 async function downloadCsv() {
   exporting.value = true
   try {
@@ -677,6 +754,13 @@ async function downloadCsv() {
 function handleError(error: unknown) {
   console.error(error)
   errorMessage.value = 'เกิดข้อผิดพลาด โปรดลองอีกครั้ง'
+}
+
+function formatDateOnly(value: string) {
+  if (!value) return '-'
+  return new Intl.DateTimeFormat('th-TH', {
+    dateStyle: 'medium',
+  }).format(new Date(`${value}T00:00:00`))
 }
 
 function formatCurrency(amount: number) {
@@ -743,3 +827,4 @@ function isWithinDateRange(orderDate?: string | null) {
   padding: 16px;
 }
 </style>
+

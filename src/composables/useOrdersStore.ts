@@ -7,6 +7,8 @@ import type {
   Order,
   OrderPayload,
   SummaryResponse,
+  PaymentBulkUpdateRequest,
+  PaymentBulkUpdateResponse,
 } from '../types/orders'
 
 const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
@@ -118,6 +120,17 @@ async function togglePaid(orderId: number, isPaid: boolean) {
   await Promise.all([fetchOrders(), fetchSummary()])
 }
 
+async function markOrdersPaid(payload: PaymentBulkUpdateRequest) {
+  const body: PaymentBulkUpdateRequest = {
+    start_date: payload.start_date,
+    end_date: payload.end_date,
+    is_paid: payload.is_paid,
+  }
+  const { data } = await api.post<PaymentBulkUpdateResponse>('/orders/mark-paid', body)
+  await Promise.all([fetchOrders(), fetchSummary()])
+  return data
+}
+
 async function createMenuItem(payload: MenuItemPayload) {
   await api.post('/menu-items', payload)
   await Promise.all([fetchMenuItems(), fetchOptions()])
@@ -167,6 +180,7 @@ export function useOrdersStore() {
     updateOrder,
     deleteOrder,
     togglePaid,
+    markOrdersPaid,
     createMenuItem,
     updateMenuItem,
     deleteMenuItem,
