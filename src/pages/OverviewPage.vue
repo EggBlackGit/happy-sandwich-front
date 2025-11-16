@@ -26,7 +26,7 @@
       </v-col>
     </v-row>
 
-    <v-card elevation="2" class="mb-4">
+    <v-card elevation="2" class="mb-4" :loading="store.loading.summary">
       <v-card-title class="text-h6 font-weight-bold">
         สรุปภาพรวม
       </v-card-title>
@@ -67,7 +67,7 @@
       </v-card-text>
     </v-card>
 
-    <v-card elevation="2" class="mb-4">
+    <v-card elevation="2" class="mb-4" :loading="store.loading.summary">
       <v-card-title class="text-h6 font-weight-bold">
         คำนวณการใช้ขนมปัง
       </v-card-title>
@@ -126,7 +126,7 @@
 
     <v-row dense>
       <v-col cols="12" md="6">
-        <v-card elevation="2" class="mb-4">
+        <v-card elevation="2" class="mb-4" :loading="store.loading.summary">
           <v-card-title class="text-h6 font-weight-bold">
             สถานะค้างชำระ
           </v-card-title>
@@ -144,7 +144,7 @@
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card elevation="2" class="mb-4">
+        <v-card elevation="2" class="mb-4" :loading="store.loading.summary">
           <v-card-title class="text-h6 font-weight-bold">
             สรุปเมนู (ยอดรวม)
           </v-card-title>
@@ -180,7 +180,7 @@
       </v-col>
     </v-row>
 
-    <v-card elevation="2" class="mt-6">
+    <v-card elevation="2" class="mt-6" :loading="store.loading.summary">
       <v-card-title class="text-h6 font-weight-bold">
         รายการตามแต่ละเมนู
       </v-card-title>
@@ -301,46 +301,27 @@ onMounted(async () => {
   if (!store.orders.value.length) {
     await store.fetchOrders()
   }
-  await Promise.all([store.fetchSummary(), store.fetchOptions()])
+  await Promise.all([store.fetchSummary(dateFilters.start, dateFilters.end), store.fetchOptions()])
 })
 
-const filteredOrders = computed(() =>
-  store.orders.value.filter((order) => isWithinDateRange(order.order_date)),
+watch(
+  () => [dateFilters.start, dateFilters.end],
+  async ([start, end]) => {
+    store.loading.summary = true
+    await store.fetchSummary(start, end)
+    store.loading.summary = false
+  },
 )
 
-const filteredSummary = computed(() => {
-  const list = filteredOrders.value
-  return {
-    total_orders: list.length,
-    total_quantity: list.reduce((sum, order) => sum + (order.quantity || 0), 0),
-    unpaid_orders: list.filter((order) => !order.is_paid).length,
-  }
-})
+const filteredOrders = computed(() => store.orders.value.filter((order) => isWithinDateRange(order.order_date)))
 
-const filteredBreakdown = computed(() => {
-  const map = new Map<
-    string,
-    { menu_item_id: string; menu_item_name: string; total_quantity: number; unpaid_quantity: number }
-  >()
-  filteredOrders.value.forEach((order) => {
-    const entry =
-      map.get(order.menu_item_id) ||
-      {
-        menu_item_id: order.menu_item_id,
-        menu_item_name: order.menu_item_name,
-        total_quantity: 0,
-        unpaid_quantity: 0,
-      }
-    entry.total_quantity += order.quantity || 0
-    if (!order.is_paid) {
-      entry.unpaid_quantity += order.quantity || 0
-    }
-    map.set(order.menu_item_id, entry)
-  })
-  return Array.from(map.values()).sort(
+const filteredSummary = computed(() => store.summary)
+
+const filteredBreakdown = computed(() =>
+  [...store.summary.menu_breakdown].sort(
     (a, b) => getMenuPriority(a.menu_item_id) - getMenuPriority(b.menu_item_id) || a.menu_item_name.localeCompare(b.menu_item_name),
-  )
-})
+  ),
+)
 
 const groupedMenuOrders = computed(() => {
   const map = new Map<

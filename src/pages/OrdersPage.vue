@@ -378,6 +378,95 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="editDialog" max-width="640">
+      <v-card>
+        <v-card-title class="text-h6 font-weight-bold">แก้ไขออเดอร์</v-card-title>
+        <v-card-text>
+          <v-form ref="editFormRef" @submit.prevent="submitEdit">
+            <v-text-field
+              v-model="editForm.customer_name"
+              label="ชื่อลูกค้า"
+              :rules="[requiredRule]"
+              prepend-inner-icon="mdi-account"
+              density="comfortable"
+              required
+            />
+            <v-text-field
+              v-model="editForm.order_date"
+              label="วันที่สั่ง"
+              type="date"
+              density="comfortable"
+              prepend-inner-icon="mdi-calendar"
+            />
+            <v-textarea
+              v-model="editForm.note"
+              label="หมายเหตุ"
+              rows="2"
+              auto-grow
+              density="comfortable"
+            />
+            <v-switch
+              v-model="editForm.is_paid"
+              color="secondary"
+              inset
+              label="ชำระแล้ว"
+            />
+            <v-divider class="my-4" />
+            <div class="text-subtitle-1 font-weight-bold mb-2">รายละเอียดเมนู</div>
+            <v-row dense>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="editForm.menu_item_id"
+                  :items="store.options.menu_items"
+                  item-title="name"
+                  item-value="id"
+                  label="เมนู"
+                  :rules="[requiredRule]"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-food"
+                  @update:model-value="onEditMenuChange"
+                  :disabled="!store.options.menu_items.length"
+                  required
+                />
+              </v-col>
+              <v-col cols="6" md="3">
+                <v-text-field
+                  v-model.number="editForm.quantity"
+                  label="จำนวนชิ้น"
+                  type="number"
+                  min="1"
+                  :rules="[requiredNumberRule]"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-counter"
+                  @change="syncEditPriceWithQuantity"
+                  required
+                />
+              </v-col>
+              <v-col cols="6" md="3">
+                <v-text-field
+                  v-model.number="editForm.price"
+                  label="ราคา (บาท)"
+                  type="number"
+                  min="0"
+                  step="5"
+                  density="comfortable"
+                  prefix="฿"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <v-card-actions class="justify-end ga-2">
+          <v-btn variant="text" color="grey" @click="resetEditForm" :disabled="formSubmitting">
+            ยกเลิก
+          </v-btn>
+          <v-btn color="primary" :loading="formSubmitting" @click="submitEdit" :disabled="!editOrderId">
+            บันทึกการแก้ไข
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
 
     <v-snackbar v-model="snackbar" timeout="2500">
       {{ snackbarMessage }}
@@ -412,6 +501,15 @@ const orders = store.orders
 const baseForm = reactive<BaseForm>(createEmptyBaseForm())
 const itemForm = reactive<ItemForm>(createEmptyItemForm())
 const pendingItems = ref<PendingEntry[]>([])
+const editForm = reactive({
+  customer_name: '',
+  note: '',
+  order_date: today(),
+  is_paid: false,
+  menu_item_id: '',
+  quantity: 1,
+  price: 0,
+})
 const dateFilters = reactive({
   start: today(),
   end: today(),
@@ -444,6 +542,9 @@ watch(
 )
 
 const editingOrderId = ref<number | null>(null)
+const editOrderId = ref<number | null>(null)
+const editDialog = ref(false)
+const editFormRef = ref()
 const formRef = ref()
 const formSubmitting = ref(false)
 const loading = reactive({ orders: false, summary: false })
@@ -568,7 +669,11 @@ async function refreshAll() {
   try {
     loading.orders = true
     loading.summary = true
-    await Promise.all([store.fetchOptions(), store.fetchOrders(), store.fetchSummary()])
+    await Promise.all([
+      store.fetchOptions(),
+      store.fetchOrders(),
+      store.fetchSummary(dateFilters.start, dateFilters.end),
+    ])
   } catch (error) {
     handleError(error)
   } finally {
@@ -643,20 +748,17 @@ function removePendingItem(id: number) {
 }
 
 function startEdit(order: Order) {
-  editingOrderId.value = order.id
-  Object.assign(baseForm, {
+  editOrderId.value = order.id
+  Object.assign(editForm, {
     customer_name: order.customer_name,
     note: order.note || '',
     order_date: order.order_date?.split('T')[0] || today(),
     is_paid: order.is_paid,
-  })
-  Object.assign(itemForm, {
     menu_item_id: order.menu_item_id,
-    menu_item_name: order.menu_item_name,
     quantity: order.quantity,
     price: order.price,
   })
-  pendingItems.value = []
+  editDialog.value = true
 }
 
 function resetForm() {
@@ -664,6 +766,20 @@ function resetForm() {
   Object.assign(itemForm, createEmptyItemForm())
   pendingItems.value = []
   editingOrderId.value = null
+}
+
+function resetEditForm() {
+  Object.assign(editForm, {
+    customer_name: '',
+    note: '',
+    order_date: today(),
+    is_paid: false,
+    menu_item_id: '',
+    quantity: 1,
+    price: 0,
+  })
+  editOrderId.value = null
+  editDialog.value = false
 }
 
 function resetItemForm() {
@@ -676,8 +792,18 @@ function syncPriceWithQuantity() {
   itemForm.price = menuMeta.default_price * Math.max(1, itemForm.quantity || 1)
 }
 
+function syncEditPriceWithQuantity() {
+  const menuMeta = menuLookup.value[editForm.menu_item_id]
+  if (!menuMeta) return
+  editForm.price = menuMeta.default_price * Math.max(1, editForm.quantity || 1)
+}
+
 function onMenuChange() {
   syncPriceWithQuantity()
+}
+
+function onEditMenuChange() {
+  syncEditPriceWithQuantity()
 }
 
 function confirmDelete(order: Order) {
@@ -731,6 +857,37 @@ async function markDateRangePaid() {
     handleError(error)
   } finally {
     bulkUpdating.value = false
+  }
+}
+
+async function submitEdit() {
+  if (!editOrderId.value) return
+  const menuMeta = menuLookup.value[editForm.menu_item_id]
+  if (!menuMeta) {
+    errorMessage.value = 'เลือกเมนูจากรายการที่มี'
+    return
+  }
+  const payload = {
+    customer_name: editForm.customer_name,
+    menu_item_id: editForm.menu_item_id,
+    menu_item_name: menuMeta.name,
+    quantity: editForm.quantity,
+    price: editForm.price,
+    note: editForm.note,
+    order_date: editForm.order_date,
+    is_paid: editForm.is_paid,
+  }
+  formSubmitting.value = true
+  try {
+    await store.updateOrder(editOrderId.value, payload)
+    snackbarMessage.value = 'แก้ไขออเดอร์แล้ว'
+    snackbar.value = true
+    await Promise.all([store.fetchOrders(), store.fetchSummary()])
+    resetEditForm()
+  } catch (error) {
+    handleError(error)
+  } finally {
+    formSubmitting.value = false
   }
 }
 

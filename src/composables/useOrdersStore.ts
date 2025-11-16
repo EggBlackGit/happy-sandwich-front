@@ -86,10 +86,15 @@ async function fetchOrders() {
   }
 }
 
-async function fetchSummary() {
+async function fetchSummary(startDate?: string, endDate?: string) {
   loading.summary = true
   try {
-    const { data } = await api.get<SummaryResponse>('/reports/summary')
+    const { data } = await api.get<SummaryResponse>('/reports/summary', {
+      params: {
+        start_date: startDate,
+        end_date: endDate,
+      },
+    })
     Object.assign(summary, data)
   } finally {
     loading.summary = false
