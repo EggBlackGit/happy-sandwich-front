@@ -255,6 +255,9 @@ const BREAD_SLICES_PER_MENU: Record<string, number> = {
   'sandwich-chili-medium': 2,
   'sandwich-classic-small': 1,
   'sandwich-chili-small': 1,
+  'sandwich-steamed-custard-small': 1,
+  'sandwich-chocolate-small': 1,
+  'sandwich-strawberry-small': 1,
 }
 const USABLE_SLICES_PER_LOAF = 18
 
